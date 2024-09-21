@@ -1,0 +1,12 @@
+dummy/bin/
+vendor/
+logs/
+
+*.log
+*.csv
+*.pdf
+*.png
+*.pyc
+*.txt
+*.zip
+*.pyc
