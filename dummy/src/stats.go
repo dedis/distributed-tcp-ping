@@ -33,11 +33,9 @@ func (s *Stats) statsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Stats) start() {
-	// Start the HTTP server and serve the /stats endpoint
 	http.HandleFunc("/stats", s.statsHandler)
 
-	// Accept a command-line argument to specify the port number
 	port := 8080 // Default port
-	fmt.Printf("Starting server on port %d...\n", port)
+	fmt.Printf("Starting http server on port %d...\n", port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(port), nil))
 }
