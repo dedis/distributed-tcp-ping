@@ -67,12 +67,12 @@ func NewProxy(name int64, replicas []Replica, debugOn bool, debugLevel int) *Pro
 		if pr.name != intName {
 			pr.addrList[intName] = replicas[i].IP
 			pr.mutexes[intName] = &sync.Mutex{}
-			pr.rttLatency[intName] = 0
 			pr.sentTimestamp[intName] = time.Now()
 		}
 		if pr.name == intName {
 			pr.serverAddress = replicas[i].IP
 		}
+		pr.rttLatency[intName] = 0
 	}
 
 	pr.RegisterRPC(&Ping{}, GetRPCCodes().Ping)

@@ -67,3 +67,29 @@ func GetPort(address string) string {
 	return parts[1]
 
 }
+
+// generate a config object from the given file
+
+func ReadYAMLNoModify(fileName string) ([]Replica, error) {
+	data, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	var config Config
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// Create an array of Replicas
+	var replicas []Replica
+	for _, peer := range config.Peers {
+		replicas = append(replicas, Replica{
+			Name: peer.Name,
+			IP:   peer.Address,
+		})
+	}
+
+	return replicas, nil
+}

@@ -1,22 +1,12 @@
 pwd=$(pwd)
 . "${pwd}"/setup/ip.sh
 
-rm ping-node/bin/ping-node
-rm torture/bin/torture
-echo "Removed old binaries"
+rm -r dummy/bin/dummy
+/bin/bash build.sh
+echo "Removed old binaries and built project"
 
-mkdir -p temp
 
-cp -r ping-node/                     temp
-cp -r torture/                   temp
-cp build.sh                      temp
-cp go.mod                   temp
-cp go.sum                   temp
-
-zip -r temp.zip temp/
-rm -r temp
-
-kill_instances="pkill dummy ; pkill torture; pkill dummy ; pkill torture; pkill dummy ; pkill torture; pkill dummy ; pkill torture; pkill dummy ; pkill torture; pkill dummy ; pkill torture"
+kill_instances="pkill -f dummy ;  pkill -f dummy"
 
 local_zip_path="temp.zip"
 remote_home_path="/home/${username}/torture/"
