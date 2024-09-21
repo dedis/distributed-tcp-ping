@@ -29,7 +29,7 @@ type Config struct {
 func ReadYAML(fileName string, name int) ([]Replica, error) {
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return nil, err
+		panic(err.Error())
 	}
 
 	var config Config
@@ -55,25 +55,19 @@ func ReadYAML(fileName string, name int) ([]Replica, error) {
 }
 
 func GetPort(address string) string {
-	// Split the address by the colon ":"
 	parts := strings.Split(address, ":")
-
-	// Ensure that there are exactly 2 parts (IP and Port)
 	if len(parts) != 2 {
 		panic("invalid address format")
 	}
-
-	// Return the IP and Port separately
 	return parts[1]
-
 }
 
-// generate a config object from the given file
+// generate a config object from the given file without modifying the address
 
 func ReadYAMLNoModify(fileName string) ([]Replica, error) {
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return nil, err
+		panic(err.Error())
 	}
 
 	var config Config
@@ -82,7 +76,6 @@ func ReadYAMLNoModify(fileName string) ([]Replica, error) {
 		panic(err.Error())
 	}
 
-	// Create an array of Replicas
 	var replicas []Replica
 	for _, peer := range config.Peers {
 		replicas = append(replicas, Replica{
@@ -90,6 +83,5 @@ func ReadYAMLNoModify(fileName string) ([]Replica, error) {
 			IP:   peer.Address,
 		})
 	}
-
 	return replicas, nil
 }
