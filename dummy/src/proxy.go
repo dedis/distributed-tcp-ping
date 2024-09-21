@@ -31,7 +31,9 @@ type Proxy struct {
 
 	startTime time.Time
 
-	rpcTable map[uint8]*RPCPair // map each RPC type (message type) to its unique number
+	rpcTable  map[uint8]*RPCPair // map each RPC type (message type) to its unique number
+	statsChan chan map[int]int64
+	stats     *Stats
 }
 
 // NewProxy creates a new proxy object
@@ -53,7 +55,9 @@ func NewProxy(name int64, replicas []Replica, debugOn bool, debugLevel int) *Pro
 		incomingChan:    make(chan *RPCPairPeer, 1000),
 		startTime:       time.Now(),
 		rpcTable:        make(map[uint8]*RPCPair),
+		statsChan:       make(chan map[int]int64, 1000),
 	}
+	pr.stats = NewStats(pr.statsChan)
 
 	// initialize the addrList
 
@@ -143,6 +147,12 @@ func (pr *Proxy) handlePong(object *RPCPairPeer) {
 	pr.debug(fmt.Sprintf("received pong from %v", object.Peer), 3)
 	sender := object.Peer
 	pr.rttLatency[sender] = time.Since(pr.sentTimestamp[sender]).Microseconds()
+	select {
+	case pr.statsChan <- pr.rttLatency:
+		pr.debug(fmt.Sprintf("sent rtt latency to stats %v", pr.rttLatency), 3)
+	default:
+		pr.debug(fmt.Sprintf("stats channel is full, dropping rtt latency %v", pr.rttLatency), 3)
+	}
 	pr.sendPing(sender)
 }
 
