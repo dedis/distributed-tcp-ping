@@ -1,8 +1,8 @@
 package dummy
 
 import (
-	"bufio"
-	"os"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"strconv"
 	"strings"
 )
@@ -11,81 +11,59 @@ import (
 	config.go defines the structs and methods to pass the configuration file, that contains the IP:ports of each dummy replica
 */
 
-type ReplicaInstance struct {
-	Name  string
-	IP    string
-	PORTS []string
+type Replica struct {
+	Name string
+	IP   string
 }
 
-// InstanceConfig describes the set of replicas
-type InstanceConfig struct {
-	Peers []ReplicaInstance
+// Config represents the structure of the YAML file.
+type Config struct {
+	Peers []struct {
+		Name    string `yaml:"name"`
+		Address string `yaml:"address"`
+	} `yaml:"peers"`
 }
 
-// NewInstanceConfig loads an instance configuration from given file
-func NewInstanceConfig(fname string, name int64) (*InstanceConfig, error) {
-	cfg := InstanceConfig{
-		Peers: []ReplicaInstance{},
+// generate a config object from the given file
+
+func ReadYAML(fileName string, name int) ([]Replica, error) {
+	data, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
 	}
 
-	file, err := os.Open(fname)
+	var config Config
+	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		panic(err.Error())
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			panic(err.Error())
-		}
-	}(file)
 
-	var lines []string
-
-	// Create a scanner to read the file line by line
-	scanner := bufio.NewScanner(file)
-
-	// Iterate over each line
-	for scanner.Scan() {
-		// Append each line to the slice
-		lines = append(lines, scanner.Text())
-	}
-
-	// Check for any errors encountered during scanning
-	if err := scanner.Err(); err != nil {
-		panic(err.Error())
-	}
-
-	// Iterate over each line
-	for _, line := range lines {
-		// Split the line by the space character
-		parts := strings.Split(line, " ")
-
-		// Create a new ReplicaInstance
-		peer := ReplicaInstance{
-			Name:  parts[0],
-			IP:    parts[1],
-			PORTS: parts[2:],
+	// Create an array of Replicas
+	var replicas []Replica
+	for _, peer := range config.Peers {
+		if strconv.Itoa(name) == peer.Name {
+			peer.Address = "0.0.0.0:" + GetPort(peer.Address)
 		}
 
-		// Append the new ReplicaInstance to the configuration
-		cfg.Peers = append(cfg.Peers, peer)
+		replicas = append(replicas, Replica{
+			Name: peer.Name,
+			IP:   peer.Address,
+		})
 	}
 
-	// set the self ip to 0.0.0.0
-	cfg = configureSelfIP(cfg, name)
-	return &cfg, nil
+	return replicas, nil
 }
 
-/*
-	Replace the IP of my self to 0.0.0.0
-*/
+func GetPort(address string) string {
+	// Split the address by the colon ":"
+	parts := strings.Split(address, ":")
 
-func configureSelfIP(cfg InstanceConfig, name int64) InstanceConfig {
-	for i := 0; i < len(cfg.Peers); i++ {
-		if cfg.Peers[i].Name == strconv.Itoa(int(name)) {
-			cfg.Peers[i].IP = "0.0.0.0"
-			return cfg
-		}
+	// Ensure that there are exactly 2 parts (IP and Port)
+	if len(parts) != 2 {
+		panic("invalid address format")
 	}
-	return cfg
+
+	// Return the IP and Port separately
+	return parts[1]
+
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"math/rand"
 	"net"
 	"strconv"
 	"sync"
@@ -15,7 +14,19 @@ import (
 // start listening to the proxy tcp connections
 
 func (pr *Proxy) NetworkInit() {
-	pr.waitForConnections()
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		pr.waitForConnections()
+		wg.Done()
+	}()
+
+	go func() {
+		pr.ConnectToReplicas()
+		wg.Done()
+	}()
+	wg.Wait()
+	pr.debug("Network initialized", 0)
 }
 
 /*
@@ -24,36 +35,34 @@ func (pr *Proxy) NetworkInit() {
 
 func (pr *Proxy) waitForConnections() {
 
-	for i := 0; i < len(pr.serverAddress); i++ {
+	counter := 0
 
-		go func(la string) {
+	var b [4]byte
+	bs := b[:4]
 
-			var b [4]byte
-			bs := b[:4]
-
-			listener, err := net.Listen("tcp", la)
-			if err != nil {
-				panic(err.Error())
-			}
-			fmt.Printf("Listening to messages on " + la + "\n")
-
-			for true {
-				conn, err := listener.Accept()
-				if err != nil {
-					panic(err.Error())
-				}
-				pr.debug("Received incoming tcp connection from someone, id yet not read", 12)
-				if _, err := io.ReadFull(conn, bs); err != nil {
-					panic(err.Error())
-				}
-				id := int32(binary.LittleEndian.Uint16(bs))
-				pr.debug("Received incoming tcp connection from "+strconv.Itoa(int(id)), 12)
-
-				go pr.connectionListener(bufio.NewReader(conn), id)
-				pr.debug("Started listening to "+strconv.Itoa(int(id)), 12)
-			}
-		}(pr.serverAddress[i])
+	listener, err := net.Listen("tcp", pr.serverAddress)
+	if err != nil {
+		panic(err.Error())
 	}
+	fmt.Printf("Listening to messages on " + pr.serverAddress + "\n")
+
+	for counter < pr.numReplicas {
+		conn, err := listener.Accept()
+		if err != nil {
+			panic(err.Error())
+		}
+		pr.debug("Received incoming tcp connection from someone, id yet not read", 0)
+		if _, err := io.ReadFull(conn, bs); err != nil {
+			panic(err.Error())
+		}
+		id := int32(binary.LittleEndian.Uint16(bs))
+		pr.debug("Received incoming tcp connection from "+strconv.Itoa(int(id)), 0)
+		pr.incomingReaders[int(id)] = bufio.NewReader(conn)
+		go pr.connectionListener(bufio.NewReader(conn), id)
+		pr.debug("Started listening to "+strconv.Itoa(int(id)), 0)
+		counter++
+	}
+
 }
 
 /*
@@ -62,14 +71,32 @@ func (pr *Proxy) waitForConnections() {
 
 func (pr *Proxy) connectionListener(reader *bufio.Reader, id int32) {
 
+	var msgType uint8
 	var err error = nil
+
 	for true {
-		obj := (&Message{}).New()
-		if err = obj.Unmarshal(reader); err != nil {
-			//pr.debug("Error while unmarshalling", 0)
+		if msgType, err = reader.ReadByte(); err != nil {
+			pr.debug("Error while reading message code: connection broken from "+strconv.Itoa(int(id))+fmt.Sprintf(" %v", err.Error()), 3)
 			return
 		}
-		pr.incomingChan <- &ReceivedMessage{message: obj, sender: id}
+		if rpair, present := pr.rpcTable[msgType]; present {
+			obj := rpair.Obj.New()
+			if err = obj.Unmarshal(reader); err != nil {
+				pr.debug("Error while unmarshalling from "+strconv.Itoa(int(id))+fmt.Sprintf(" %v", err.Error()), 3)
+				return
+			}
+			pr.incomingChan <- &RPCPairPeer{
+				RpcPair: &RPCPair{
+					Code: msgType,
+					Obj:  obj,
+				},
+				Peer: int(id),
+			}
+			pr.debug("Pushed a message from "+strconv.Itoa(int(id)), 0)
+		} else {
+			pr.debug("Error received unknown message type from "+strconv.Itoa(int(id)), 3)
+			return
+		}
 	}
 }
 
@@ -80,29 +107,27 @@ func (pr *Proxy) connectionListener(reader *bufio.Reader, id int32) {
 func (pr *Proxy) ConnectToReplicas() {
 
 	for id, addresses := range pr.addrList {
-		for i := 0; i < len(addresses); i++ {
-			var b [4]byte
-			bs := b[:4]
+		var b [4]byte
+		bs := b[:4]
 
-			for true {
-				conn, err := net.Dial("tcp", addresses[i])
-				if err == nil {
-					pr.outgoingWriters[id] = append(pr.outgoingWriters[id], bufio.NewWriter(conn))
-					pr.mutexes[id] = append(pr.mutexes[id], &sync.Mutex{})
-					binary.LittleEndian.PutUint16(bs, uint16(pr.name))
-					_, err := conn.Write(bs)
-					if err != nil {
-						//pr.debug("Error connecting to client "+strconv.Itoa(int(id)), 0)
-						panic(err)
-					}
-					pr.debug("Started outgoing tcp connection to "+addresses[i], 12)
-					break
-				} else {
-					pr.debug("failed to connect to "+addresses[i], 12)
-					time.Sleep(time.Duration(10) * time.Millisecond)
+		for true {
+			conn, err := net.Dial("tcp", addresses)
+			if err == nil {
+				pr.outgoingWriters[id] = bufio.NewWriter(conn)
+				pr.mutexes[id] = &sync.Mutex{}
+				binary.LittleEndian.PutUint16(bs, uint16(pr.name))
+				_, err := conn.Write(bs)
+				if err != nil {
+					panic(err)
 				}
+				pr.debug("Started outgoing tcp connection to "+addresses, 0)
+				break
+			} else {
+				pr.debug("failed to connect to "+addresses, 0)
+				time.Sleep(time.Duration(100) * time.Millisecond)
 			}
 		}
+
 	}
 
 }
@@ -111,19 +136,26 @@ func (pr *Proxy) ConnectToReplicas() {
 	write a message to the wire
 */
 
-func (pr *Proxy) sendMessage(peer int64, msg *Message) {
+func (pr *Proxy) sendMessage(msg *RPCPairPeer) {
+
+	peer := int32(msg.Peer)
+	messageCode := msg.RpcPair.Code
+	message := msg.RpcPair.Obj
 
 	pr.debug("sending message to  "+strconv.Itoa(int(peer)), 0)
 
-	randomWriter := rand.Intn(len(pr.outgoingWriters[peer]) + 1)
-	if randomWriter == len(pr.outgoingWriters[peer]) {
-		randomWriter--
-	}
-	w := pr.outgoingWriters[peer][randomWriter]
-	m := pr.mutexes[peer][randomWriter]
+	w := pr.outgoingWriters[int(peer)]
+	m := pr.mutexes[int(peer)]
 
 	m.Lock()
-	err := msg.Marshal(w)
+	err := w.WriteByte(messageCode)
+	if err != nil {
+		pr.debug("Error writing message code byte:"+err.Error(), 0)
+		m.Unlock()
+		return
+	}
+
+	err = message.Marshal(w)
 	if err != nil {
 		pr.debug("Error while marshalling", 0)
 		m.Unlock()
@@ -135,6 +167,6 @@ func (pr *Proxy) sendMessage(peer int64, msg *Message) {
 		m.Unlock()
 		return
 	}
-	pr.debug("sent message to  "+strconv.Itoa(int(peer)), 12)
+	pr.debug("sent message to  "+strconv.Itoa(int(peer)), 0)
 	m.Unlock()
 }

@@ -1,12 +1,24 @@
 package dummy
 
 import (
-	"bytes"
 	"encoding/binary"
-	"encoding/gob"
 	"google.golang.org/protobuf/proto"
 	"io"
 )
+
+type RPCPair struct {
+	Code uint8
+	Obj  Serializable
+}
+
+type RPCPairPeer struct {
+	RpcPair *RPCPair
+	Peer    int
+}
+
+/*
+	each message sent over the network should implement this interface
+*/
 
 type Serializable interface {
 	Marshal(io.Writer) error
@@ -15,20 +27,27 @@ type Serializable interface {
 }
 
 /*
-	A util function to get the size of a message in bytes
+	A struct that allocates a unique uint8 for each message type
 */
 
-func GetRealSizeOf(v interface{}) (int, error) {
-	b := new(bytes.Buffer)
-	if err := gob.NewEncoder(b).Encode(v); err != nil {
-		return 0, err
-	}
-	return b.Len(), nil
+type MessageCode struct {
+	Ping uint8
+	Pong uint8
 }
 
-func (t *Message) Marshal(wire io.Writer) error {
+/*
+	A static function which assigns a unique uint8 to each message type
+*/
 
-	data, err := proto.Marshal(t)
+func GetRPCCodes() MessageCode {
+	return MessageCode{
+		Ping: 1,
+		Pong: 2,
+	}
+}
+
+func marshalMessage(wire io.Writer, m proto.Message) error {
+	data, err := proto.Marshal(m)
 	if err != nil {
 		return err
 	}
@@ -47,29 +66,46 @@ func (t *Message) Marshal(wire io.Writer) error {
 	return nil
 }
 
-func (t *Message) Unmarshal(wire io.Reader) error {
-
+func unmarshalMessage(wire io.Reader, m proto.Message) error {
 	var b [8]byte
 	bs := b[:8]
-
 	_, err := io.ReadFull(wire, bs)
 	if err != nil {
 		return err
 	}
 	numBytes := binary.LittleEndian.Uint64(bs)
-
 	data := make([]byte, numBytes)
 	length, err := io.ReadFull(wire, data)
 	if err != nil {
 		return err
 	}
-	err = proto.Unmarshal(data[:length], t)
+	err = proto.Unmarshal(data[:length], m)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *Message) New() Serializable {
-	return new(Message)
+func (t *Ping) Marshal(wire io.Writer) error {
+	return marshalMessage(wire, t)
+}
+
+func (t *Ping) Unmarshal(wire io.Reader) error {
+	return unmarshalMessage(wire, t)
+}
+
+func (t *Ping) New() Serializable {
+	return new(Ping)
+}
+
+func (t *Pong) Marshal(wire io.Writer) error {
+	return marshalMessage(wire, t)
+}
+
+func (t *Pong) Unmarshal(wire io.Reader) error {
+	return unmarshalMessage(wire, t)
+}
+
+func (t *Pong) New() Serializable {
+	return new(Pong)
 }
