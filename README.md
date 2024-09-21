@@ -5,6 +5,6 @@ arbitrary number of machines.
 
 ## How to run
 
-To build the project
+To build the project run ```/bin/bash build.sh```
 
-```sudo setcap cap_net_admin=eip  /usr/sbin/xtables-nft-multi```
+Refer the ```setup/``` directory for the setup instructions.
