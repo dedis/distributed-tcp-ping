@@ -15,7 +15,7 @@ import (
 
 func (pr *Proxy) NetworkInit() {
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	wg.Add(2)
 	go func() {
 		pr.waitForConnections()
 		wg.Done()
@@ -26,7 +26,7 @@ func (pr *Proxy) NetworkInit() {
 		wg.Done()
 	}()
 	wg.Wait()
-	pr.debug("Network initialized", 0)
+	pr.debug("Network initialized both ways!", 0)
 }
 
 /*
@@ -51,7 +51,7 @@ func (pr *Proxy) waitForConnections() {
 		if err != nil {
 			panic(err.Error())
 		}
-		pr.debug("Received incoming tcp connection from someone, id yet not read", 0)
+		pr.debug("Received incoming tcp connection from someone", 0)
 		if _, err := io.ReadFull(conn, bs); err != nil {
 			panic(err.Error())
 		}
@@ -62,7 +62,6 @@ func (pr *Proxy) waitForConnections() {
 		pr.debug("Started listening to "+strconv.Itoa(int(id)), 0)
 		counter++
 	}
-
 }
 
 /*
@@ -75,6 +74,7 @@ func (pr *Proxy) connectionListener(reader *bufio.Reader, id int32) {
 	var err error = nil
 
 	for true {
+
 		if msgType, err = reader.ReadByte(); err != nil {
 			pr.debug("Error while reading message code: connection broken from "+strconv.Itoa(int(id))+fmt.Sprintf(" %v", err.Error()), 3)
 			return
