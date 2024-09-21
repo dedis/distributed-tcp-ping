@@ -1,10 +1,11 @@
 # Distributed TCP Ping
 
-A simple tool to measure the latency between two machines using TCP packets. Works in a distributed environment with
-arbitrary number of machines.
+A simple networked tool to measure the latency between each pair of machines.
+Works in a distributed environment with arbitrary number of machines.
 
 ## How to run
 
 To build the project run ```/bin/bash build.sh```
 
-Refer the ```setup/``` directory for the setup instructions.
+Refer the ```setup/``` directory for instructions on how to setup and run the project in a distributed environment with
+5 machines.

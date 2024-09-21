@@ -4,7 +4,7 @@ pwd=$(pwd)
 rm nohup.out
 
 dummy_path="/dummy/dummy"
-config="/home/${username}/dummy/dedus-config.yaml"
+config="/home/${username}/dummy/dedis-config.yaml"
 
 local_output_path="logs/dummy/"
 rm -r "${local_output_path}"; mkdir -p "${local_output_path}"
@@ -26,7 +26,7 @@ nohup ssh ${replica5}  -i ${cert}   ".${dummy_path} --config ${config} --name 5 
 
 echo "Started dummy replicas"
 
-sleep  60
+sleep  120
 
 for index in "${!replicas[@]}";
 do

@@ -1,5 +1,7 @@
 dummy/bin/
+stats/bin/
 vendor/
+venv/
 logs/
 
 *.log
