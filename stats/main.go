@@ -4,43 +4,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	dummy "ping-ping/dummy/src"
 	"strings"
 	"time"
 )
 
-// Stats represents the map[int]int structure from the server response
-type Stats map[int]int
-
-// fetchStats sends a request to the /stats endpoint of a given server and returns the stats
-func fetchStats(server string) (Stats, error) {
-	url := fmt.Sprintf("http://%s/stats", server)
-
-	// Create an HTTP client with a timeout
-	client := &http.Client{Timeout: 10 * time.Second}
-
-	// Perform the GET request
-	resp, err := client.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch stats from server %s: %v", server, err)
-	}
-	defer resp.Body.Close()
-
-	// Check if the request was successful
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("server %s returned non-OK status: %s", server, resp.Status)
-	}
-
-	// Decode the JSON response into the Stats map
-	var stats Stats
-	if err := json.NewDecoder(resp.Body).Decode(&stats); err != nil {
-		return nil, fmt.Errorf("failed to decode response from server %s: %v", server, err)
-	}
-
-	return stats, nil
-}
+// Stats represents the map[int]int64 structure from the server response
+type Stats map[int]int64
 
 func main() {
 
@@ -63,7 +34,7 @@ func main() {
 			// Fetch the stats from each server
 			stats, err := fetchStats(replicas[i].IP)
 			if err != nil {
-				log.Printf("Error: %v\n", err)
+				fmt.Printf("Error: %v\n", err)
 				continue
 			}
 
@@ -73,4 +44,32 @@ func main() {
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+// fetchStats sends a request to the /stats endpoint of a given server and returns the stats
+func fetchStats(server string) (Stats, error) {
+	url := fmt.Sprintf("http://%s/stats", server)
+
+	// Create an HTTP client with a timeout
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	// Perform the GET request
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch stats from server %s: %v", server, err)
+	}
+	defer resp.Body.Close()
+
+	// Check if the request was successful
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server %s returned non-OK status: %s", server, resp.Status)
+	}
+
+	// Decode the JSON response into the Stats map
+	var stats Stats
+	if err := json.NewDecoder(resp.Body).Decode(&stats); err != nil {
+		return nil, fmt.Errorf("failed to decode response from server %s: %v", server, err)
+	}
+
+	return stats, nil
 }
