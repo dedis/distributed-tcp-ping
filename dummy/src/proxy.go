@@ -33,7 +33,7 @@ type Proxy struct {
 
 	rpcTable  map[uint8]*RPCPair // map each RPC type (message type) to its unique number
 	statsChan chan map[int]int64
-	stats     *Stats
+	Stats     *Stats
 }
 
 // NewProxy creates a new proxy object
@@ -57,22 +57,21 @@ func NewProxy(name int64, replicas []Replica, debugOn bool, debugLevel int) *Pro
 		rpcTable:        make(map[uint8]*RPCPair),
 		statsChan:       make(chan map[int]int64, 1000),
 	}
-	pr.stats = NewStats(pr.statsChan)
+	pr.Stats = NewStats(pr.statsChan)
 
 	// initialize the addrList
 
 	for i := 0; i < pr.numReplicas; i++ {
 		intName, _ := strconv.Atoi(replicas[i].Name)
 
-		if pr.name != intName {
-			pr.addrList[intName] = replicas[i].IP
-			pr.mutexes[intName] = &sync.Mutex{}
-			pr.sentTimestamp[intName] = time.Now()
-		}
+		pr.addrList[intName] = replicas[i].IP
+		pr.mutexes[intName] = &sync.Mutex{}
+		pr.rttLatency[intName] = 0
+		pr.sentTimestamp[intName] = time.Now()
+
 		if pr.name == intName {
 			pr.serverAddress = replicas[i].IP
 		}
-		pr.rttLatency[intName] = 0
 	}
 
 	pr.RegisterRPC(&Ping{}, GetRPCCodes().Ping)
@@ -87,7 +86,7 @@ func NewProxy(name int64, replicas []Replica, debugOn bool, debugLevel int) *Pro
 
 func (n *Proxy) RegisterRPC(msgObj Serializable, code uint8) {
 	n.rpcTable[code] = &RPCPair{Code: code, Obj: msgObj}
-	n.debug("Registered RPC code "+strconv.Itoa(int(code)), 3)
+	n.debug("Registered RPC code "+strconv.Itoa(int(code)), 0)
 }
 
 /*
@@ -101,12 +100,12 @@ func (pr *Proxy) Run() {
 
 	for true {
 		m_object := <-pr.incomingChan
-		pr.debug(fmt.Sprintf("recevied message %v", m_object), 3)
+		pr.debug(fmt.Sprintf("recevied message %v", m_object), 0)
 		if m_object.RpcPair.Code == GetRPCCodes().Ping {
-			pr.debug(fmt.Sprintf("received ping from %v", m_object.Peer), 3)
+			pr.debug(fmt.Sprintf("received ping from %v", m_object.Peer), 0)
 			pr.handlePing(m_object)
 		} else if m_object.RpcPair.Code == GetRPCCodes().Pong {
-			pr.debug(fmt.Sprintf("received pong from %v", m_object.Peer), 3)
+			pr.debug(fmt.Sprintf("received pong from %v", m_object.Peer), 0)
 			pr.handlePong(m_object)
 		} else {
 			panic("unknown message type")
@@ -139,21 +138,8 @@ func (pr *Proxy) sendPing(id int) {
 
 func (pr *Proxy) handlePing(object *RPCPairPeer) {
 	sender := object.Peer
-	pr.debug(fmt.Sprintf("received ping from %v", sender), 3)
+	pr.debug(fmt.Sprintf("received ping from %v", sender), 0)
 	pr.sendPong(sender)
-}
-
-func (pr *Proxy) handlePong(object *RPCPairPeer) {
-	pr.debug(fmt.Sprintf("received pong from %v", object.Peer), 3)
-	sender := object.Peer
-	pr.rttLatency[sender] = time.Since(pr.sentTimestamp[sender]).Microseconds()
-	select {
-	case pr.statsChan <- pr.rttLatency:
-		pr.debug(fmt.Sprintf("sent rtt latency to stats %v", pr.rttLatency), 3)
-	default:
-		pr.debug(fmt.Sprintf("stats channel is full, dropping rtt latency %v", pr.rttLatency), 3)
-	}
-	pr.sendPing(sender)
 }
 
 func (pr *Proxy) sendPong(sender int) {
@@ -164,5 +150,18 @@ func (pr *Proxy) sendPong(sender int) {
 		},
 		Peer: sender,
 	})
-	pr.debug(fmt.Sprintf("sent pong to %v", sender), 3)
+	pr.debug(fmt.Sprintf("sent pong to %v", sender), 0)
+}
+
+func (pr *Proxy) handlePong(object *RPCPairPeer) {
+	pr.debug(fmt.Sprintf("received pong from %v", object.Peer), 0)
+	sender := object.Peer
+	pr.rttLatency[sender] = time.Since(pr.sentTimestamp[sender]).Microseconds()
+	select {
+	case pr.statsChan <- pr.rttLatency:
+		pr.debug(fmt.Sprintf("sent rtt latency to stats %v", pr.rttLatency), 0)
+	default:
+		pr.debug(fmt.Sprintf("stats channel is full, dropping rtt latency %v", pr.rttLatency), 0)
+	}
+	pr.sendPing(sender)
 }

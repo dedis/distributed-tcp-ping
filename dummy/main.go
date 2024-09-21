@@ -11,7 +11,7 @@ func main() {
 	configFile := flag.String("config", "dedis-config.yaml", "configuration file")
 	name := flag.Int64("name", 1, "name of the replica")
 	debugOn := flag.Bool("debugOn", false, "true / false")
-	debugLevel := flag.Int("debugLevel", 1, "debug level")
+	debugLevel := flag.Int("debugLevel", 0, "debug level")
 
 	flag.Parse()
 
@@ -23,6 +23,6 @@ func main() {
 	proxyInstance := dummy.NewProxy(*name, replicas, *debugOn, *debugLevel)
 
 	proxyInstance.NetworkInit()
+	go proxyInstance.Stats.Start()
 	proxyInstance.Run()
-
 }

@@ -32,7 +32,7 @@ func (s *Stats) statsHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *Stats) start() {
+func (s *Stats) Start() {
 	http.HandleFunc("/stats", s.statsHandler)
 
 	port := 8080 // Default port
