@@ -15,7 +15,10 @@ replica4=pasindu@${replica4_name}
 replica5_name=10.156.33.145
 replica5=pasindu@${replica5_name}
 
-replicas=(${replica1} ${replica2} ${replica3} ${replica4} ${replica5})
-replica_names=(${replica1_name} ${replica2_name} ${replica3_name} ${replica4_name} ${replica5_name})
+replica6_name=10.156.33.146
+replica6=pasindu@${replica6_name}
+
+replicas=(${replica1} ${replica2} ${replica3} ${replica4} ${replica5} ${replica6})
+replica_names=(${replica1_name} ${replica2_name} ${replica3_name} ${replica4_name} ${replica5_name} ${replica6_name})
 
 username="pasindu"
