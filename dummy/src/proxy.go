@@ -55,7 +55,7 @@ func NewProxy(name int64, replicas []Replica, debugOn bool, debugLevel int) *Pro
 		incomingChan:    make(chan *RPCPairPeer, 1000),
 		startTime:       time.Now(),
 		rpcTable:        make(map[uint8]*RPCPair),
-		statsChan:       make(chan map[int]int64, 1000),
+		statsChan:       make(chan map[int]int64, len(replicas)),
 	}
 	pr.Stats = NewStats(pr.statsChan)
 
