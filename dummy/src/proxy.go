@@ -158,10 +158,19 @@ func (pr *Proxy) handlePong(object *RPCPairPeer) {
 	sender := object.Peer
 	pr.rttLatency[sender] = time.Since(pr.sentTimestamp[sender]).Microseconds()
 	select {
-	case pr.statsChan <- pr.rttLatency:
+	case pr.statsChan <- Copy(pr.rttLatency):
 		pr.debug(fmt.Sprintf("sent rtt latency to stats %v", pr.rttLatency), 0)
 	default:
 		pr.debug(fmt.Sprintf("stats channel is full, dropping rtt latency %v", pr.rttLatency), 0)
 	}
 	pr.sendPing(sender)
+}
+
+func Copy(latency map[int]int64) map[int]int64 {
+	newMap := make(map[int]int64)
+	for k, v := range latency {
+		newMap[k] = v
+	}
+	return newMap
+
 }
