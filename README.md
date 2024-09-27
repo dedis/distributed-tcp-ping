@@ -1,6 +1,6 @@
 # Distributed TCP Ping
 
-A simple networked tool to measure the latency between each pair of machines.
+A simple networked tool to measure the latency between each pair of machines, on top of TCP stack.
 Works in a distributed environment with arbitrary number of machines.
 
 ## How to run
