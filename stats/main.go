@@ -46,13 +46,13 @@ func main() {
 
 			sort.Ints(keys)
 
-			fmt.Printf("Stats from server %s -- ", replicas[i].Name)
+			fmt.Printf("\nStats from server %s -- ", replicas[i].Name)
 			for _, k := range keys {
-				fmt.Printf("Replica: %d, Value: %d", k, stats[k])
+				fmt.Printf("Replica: %d: Value: %d, ", k, stats[k])
 			}
 			fmt.Println()
 		}
-		time.Sleep(100 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
