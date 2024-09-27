@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	dummy "ping-ping/dummy/src"
+	"sort"
 	"strings"
 	"time"
 )
@@ -38,8 +39,17 @@ func main() {
 				continue
 			}
 
-			// Print the stats
-			fmt.Printf("Stats from server %s -- %v\n", replicas[i].Name, stats)
+			keys := make([]int, 0, len(stats))
+			for k := range stats {
+				keys = append(keys, k)
+			}
+
+			sort.Ints(keys)
+
+			fmt.Printf("Stats from server %s -- ", replicas[i].Name)
+			for _, k := range keys {
+				fmt.Printf("Replica: %d, Value: %d", k, stats[k])
+			}
 			fmt.Println()
 		}
 		time.Sleep(1 * time.Second)

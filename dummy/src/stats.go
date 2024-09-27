@@ -26,7 +26,7 @@ func (s *Stats) statsHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, "Unable to encode JSON", http.StatusInternalServerError)
 		}
-		fmt.Println(fmt.Sprintf("Stats published to http: %v", stats))
+		//fmt.Println(fmt.Sprintf("Stats published to http: %v", stats))
 	default:
 		http.Error(w, "No stats available", http.StatusNotFound)
 	}
