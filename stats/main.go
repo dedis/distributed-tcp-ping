@@ -52,7 +52,7 @@ func main() {
 			}
 			fmt.Println()
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Second)
 	}
 }
 
