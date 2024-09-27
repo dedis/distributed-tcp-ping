@@ -48,7 +48,7 @@ func main() {
 
 			fmt.Printf("\nStats from server %s -- ", replicas[i].Name)
 			for _, k := range keys {
-				fmt.Printf("Replica: %d: Value: %d, ", k, stats[k])
+				fmt.Printf("%d: %d, ", k, stats[k])
 			}
 			fmt.Println()
 		}
