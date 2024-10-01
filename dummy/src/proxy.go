@@ -125,6 +125,7 @@ func (pr *Proxy) debug(s string, i int) {
 
 func (pr *Proxy) sendPing(id int) {
 	pr.debug(fmt.Sprintf("sending ping to %v", id), 0)
+	pr.sentTimestamp[id] = time.Now()
 	pr.sendMessage(&RPCPairPeer{
 		RpcPair: &RPCPair{
 			Code: GetRPCCodes().Ping,
@@ -134,7 +135,7 @@ func (pr *Proxy) sendPing(id int) {
 		},
 		Peer: id,
 	})
-	pr.sentTimestamp[id] = time.Now()
+
 }
 
 func (pr *Proxy) handlePing(object *RPCPairPeer) {
