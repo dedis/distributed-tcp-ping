@@ -9,27 +9,24 @@ import (
 )
 
 type Stats struct {
-	in chan map[int]int64
+	pr *Proxy
 }
 
-func NewStats(in chan map[int]int64) *Stats {
+func NewStats(pr *Proxy) *Stats {
 	return &Stats{
-		in: in,
+		pr: pr,
 	}
 }
 
 func (s *Stats) statsHandler(w http.ResponseWriter, r *http.Request) {
-	select {
-	case stats := <-s.in:
-		w.Header().Set("Content-Type", "application/json")
-		err := json.NewEncoder(w).Encode(stats)
-		if err != nil {
-			http.Error(w, "Unable to encode JSON", http.StatusInternalServerError)
-		}
-		//fmt.Println(fmt.Sprintf("Stats published to http: %v", stats))
-	default:
-		http.Error(w, "No stats available", http.StatusNotFound)
+	stats := s.pr.GetRtt()
+
+	w.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(stats)
+	if err != nil {
+		http.Error(w, "Unable to encode JSON", http.StatusInternalServerError)
 	}
+	//fmt.Println(fmt.Sprintf("Stats published to http: %v", stats))
 
 }
 

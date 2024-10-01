@@ -25,15 +25,16 @@ type Proxy struct {
 	debugLevel int  // debug level
 
 	rttLatency    map[int]int64     // map to store the round trip time of each replica
+	rttMutex      *sync.Mutex       // mutex for the rttLatency map
 	sentTimestamp map[int]time.Time // map to store the sent time of each message
 
 	incomingChan chan *RPCPairPeer // all incoming messages are sent to this channel
 
 	startTime time.Time
 
-	rpcTable  map[uint8]*RPCPair // map each RPC type (message type) to its unique number
-	statsChan chan map[int]int64
-	Stats     *Stats
+	rpcTable map[uint8]*RPCPair // map each RPC type (message type) to its unique number
+
+	Stats *Stats
 }
 
 // NewProxy creates a new proxy object
@@ -51,13 +52,13 @@ func NewProxy(name int64, replicas []Replica, debugOn bool, debugLevel int) *Pro
 		debugOn:         debugOn,
 		debugLevel:      debugLevel,
 		rttLatency:      make(map[int]int64),
+		rttMutex:        &sync.Mutex{},
 		sentTimestamp:   make(map[int]time.Time),
 		incomingChan:    make(chan *RPCPairPeer, 1000),
 		startTime:       time.Now(),
 		rpcTable:        make(map[uint8]*RPCPair),
-		statsChan:       make(chan map[int]int64, len(replicas)),
 	}
-	pr.Stats = NewStats(pr.statsChan)
+	pr.Stats = NewStats(&pr)
 
 	// initialize the addrList
 
@@ -156,13 +157,9 @@ func (pr *Proxy) sendPong(sender int) {
 func (pr *Proxy) handlePong(object *RPCPairPeer) {
 	pr.debug(fmt.Sprintf("received pong from %v", object.Peer), 0)
 	sender := object.Peer
-	pr.rttLatency[sender] = time.Since(pr.sentTimestamp[sender]).Microseconds()
-	select {
-	case pr.statsChan <- Copy(pr.rttLatency):
-		pr.debug(fmt.Sprintf("sent rtt latency to stats %v", pr.rttLatency), 0)
-	default:
-		pr.debug(fmt.Sprintf("stats channel is full, dropping rtt latency %v", pr.rttLatency), 0)
-	}
+	pr.rttMutex.Lock()
+	pr.rttLatency[sender] = time.Now().Sub(pr.sentTimestamp[sender]).Microseconds()
+	pr.rttMutex.Unlock()
 	pr.sendPing(sender)
 }
 
@@ -173,4 +170,10 @@ func Copy(latency map[int]int64) map[int]int64 {
 	}
 	return newMap
 
+}
+
+func (pr *Proxy) GetRtt() map[int]int64 {
+	pr.rttMutex.Lock()
+	defer pr.rttMutex.Unlock()
+	return Copy(pr.rttLatency)
 }
