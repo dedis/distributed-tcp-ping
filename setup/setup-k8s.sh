@@ -64,7 +64,7 @@ ${cmd}
 
 # Execute on each replica
 for host in "${replicas[@]}"; do
-  echo "→ Installing Kubernetes on ${host}"
+  echo "→ Installing containerd on ${host}"
   ssh -i "${cert}" \
       -o StrictHostKeyChecking=no \
       -o UserKnownHostsFile=/dev/null \
