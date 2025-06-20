@@ -1,41 +1,40 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 pwd="$(pwd)"
 . "${pwd}/setup/ip.sh"
 
-# Build the remote install command
-read -r -d '' cmd <<'EOF'
-# remove old repo
+# Determine the current stable Kubernetes minor version (e.g., v1.30)
+stable_minor_version=$(curl -sSL https://dl.k8s.io/release/stable.txt | sed -E 's/^(v[0-9]+\.[0-9]+)\..*$/\1/')
+
+# Remote install command, with evaluated version
+read -r -d '' cmd <<EOF
+# Remove old Kubernetes source list
 sudo rm -f /etc/apt/sources.list.d/kubernetes.list &&
 
-# install deps
+# Install required packages
 sudo apt-get update &&
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg &&
 
-# prepare keyring
+# Create keyrings directory
 sudo mkdir -p /etc/apt/keyrings &&
 
-# fetch the community key and dearmor it
-curl -fsSL https://pkgs.k8s.io/core:/stable:/$( 
-    curl -L -s https://dl.k8s.io/release/stable.txt \
-    | sed -E 's/^(v[0-9]+\.[0-9]+)\..*$/\1/' 
-)/deb/Release.key \
+# Download and install Kubernetes APT key
+curl -fsSL https://pkgs.k8s.io/core:/stable:/${stable_minor_version}/deb/Release.key \
   | sudo gpg --batch --yes --dearmor \
-    -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg &&
+  -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg &&
 
-# add the new pkgs.k8s.io repository
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] \
-  https://pkgs.k8s.io/core:/stable:/\$(
-    curl -L -s https://dl.k8s.io/release/stable.txt \
-    | sed -E 's/^(v[0-9]+\.[0-9]+)\..*$/\1/' 
-  )/deb/ /" \
+# Add Kubernetes APT repository
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${stable_minor_version}/deb/ /" \
   | sudo tee /etc/apt/sources.list.d/kubernetes.list &&
 
-# install and hold the Kubernetes packages
+# Install Kubernetes components and hold them
 sudo apt-get update &&
 sudo apt-get install -y kubelet kubeadm kubectl &&
 sudo apt-mark hold kubelet kubeadm kubectl
 EOF
 
+# Execute on each replica
 for host in "${replicas[@]}"; do
   echo "→ Installing Kubernetes on ${host}"
   ssh -i "${cert}" \
