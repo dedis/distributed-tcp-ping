@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # Load replicas[] and cert from setup/ip.sh
 pwd="$(pwd)"
