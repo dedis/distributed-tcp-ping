@@ -46,6 +46,13 @@ sudo systemctl enable containerd
 
 sudo swapoff -a
 sudo sed -i '/ swap / s/^/#/' /etc/fstab
+
+# Temporarily (takes effect immediately)
+sudo sysctl -w net.ipv4.ip_forward=1
+
+# Persist across reboots
+echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-kubernetes-ip-forward.conf
+sudo sysctl --system
 EOF
 
 bash -c "$cmd"
