@@ -45,4 +45,31 @@ for host in "${replicas[@]}"; do
       "${cmd}"
 done
 
+
+read -r -d '' cmd <<EOF
+# Remove old Kubernetes source list
+sudo apt install -y containerd
+
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml > /dev/null
+
+# Switch to systemd cgroup driver
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+EOF
+
+${cmd}
+
+# Execute on each replica
+for host in "${replicas[@]}"; do
+  echo "→ Installing Kubernetes on ${host}"
+  ssh -i "${cert}" \
+      -o StrictHostKeyChecking=no \
+      -o UserKnownHostsFile=/dev/null \
+      "${host}" \
+      "${cmd}"
+done
+
 echo "✅ setup complete"
