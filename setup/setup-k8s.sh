@@ -7,7 +7,7 @@ cmd="sudo apt update; sudo apt install -y apt-transport-https ca-certificates cu
 
 for index in "${!replicas[@]}";
 do
-    sshpass ssh "${cmd}"
+    sshpass ssh "${replicas[${index}]}" -i ${cert}  "${cmd}"
 done
 
 echo "setup complete"
