@@ -3,7 +3,9 @@ pwd=$(pwd)
 
 rm -r dummy/bin/dummy
 rm -r stats/bin/stats
+
 /bin/bash build.sh
+
 echo "Removed old binaries and built project"
 
 firewall="sudo ufw disable"

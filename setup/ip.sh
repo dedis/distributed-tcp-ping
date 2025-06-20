@@ -1,24 +1,18 @@
-cert="/home/tennage/Pictures/pasindu"
+cert="/home/pasindut/.ssh/id_mrg-0"
 
-replica1_name=10.156.33.141
-replica1=pasindu@${replica1_name}
+replica1_name=10.0.1.2
+replica1=pasindut@${replica1_name}
 
-replica2_name=10.156.33.142
-replica2=pasindu@${replica2_name}
+replica2_name=10.0.1.3
+replica2=pasindut@${replica2_name}
 
-replica3_name=10.156.33.143
-replica3=pasindu@${replica3_name}
+replica3_name=10.0.1.4
+replica3=pasindut@${replica3_name}
 
-replica4_name=10.156.33.144
-replica4=pasindu@${replica4_name}
+replica4_name=10.0.1.5
+replica4=pasindut@${replica4_name}
 
-replica5_name=10.156.33.145
-replica5=pasindu@${replica5_name}
+username="pasindut"
 
-replica6_name=10.156.33.146
-replica6=pasindu@${replica6_name}
-
-replicas=(${replica1} ${replica2} ${replica3} ${replica4} ${replica5} ${replica6})
-replica_names=(${replica1_name} ${replica2_name} ${replica3_name} ${replica4_name} ${replica5_name} ${replica6_name})
-
-username="pasindu"
+replicas=(${replica1} ${replica2} ${replica3} ${replica4})
+replica_names=(${replica1_name} ${replica2_name} ${replica3_name} ${replica4_name})
