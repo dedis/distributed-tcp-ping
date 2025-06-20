@@ -33,6 +33,8 @@ sudo apt-get install -y kubelet kubeadm kubectl &&
 sudo apt-mark hold kubelet kubeadm kubectl
 EOF
 
+${cmd}
+
 # Execute on each replica
 for host in "${replicas[@]}"; do
   echo "→ Installing Kubernetes on ${host}"
