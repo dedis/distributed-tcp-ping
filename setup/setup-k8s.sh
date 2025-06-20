@@ -48,7 +48,7 @@ sudo swapoff -a
 sudo sed -i '/ swap / s/^/#/' /etc/fstab
 EOF
 
-"${cmd}"
+bash -c "$cmd"
 
 # Execute on each replica
 for host in "${replicas[@]}"; do
